@@ -161,7 +161,7 @@
         <div class="loader" id="loader">tuning the instruments<div class="pulse" id="pulse">gathering the adjacencies</div></div>
       </div>
     </div>
-    <div class="adv" id="adv">tap to advance</div>
+    <div class="adv" id="adv">tap to hasten</div>
     <div class="foot">
       <button id="replay">Perform again</button>
       <button id="newseed">New seed</button>
@@ -286,109 +286,182 @@ function frame(){
 }
 
 /* ============================================================
-   GENERATION
+   GENERATION — streaming
+   The server emits NDJSON over SSE: one voice per line, forwarded
+   the instant it completes. First voice lands in ~1s, not ~8s.
    ============================================================ */
-
-// Same-origin in production. Override for local dev by setting
-// window.SYMPHONY_API = "http://localhost:8787/api/symphony" before this script.
-const API = (typeof window !== 'undefined' && window.SYMPHONY_API) || '/api/symphony';
-
-async function generate(seedText){
-  const ctrl = new AbortController();
-  const deadline = setTimeout(()=>ctrl.abort(), 30000);   // never hang forever
-  try{
-    const r = await fetch(API,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ seed:seedText }),
-      signal:ctrl.signal
-    });
-    if(!r.ok){
-      const e = await r.json().catch(()=>({}));
-      throw new Error(e.error || `the ensemble returned ${r.status}`);
-    }
-    const { text, provider } = await r.json();
-    lastProvider = provider || null;
-    const c = String(text).replace(/```json|```/g,"").trim();
-    return JSON.parse(c.slice(c.indexOf("{"), c.lastIndexOf("}")+1));
-  } finally {
-    clearTimeout(deadline);
-  }
-}
-let lastProvider = null;
+const API = (typeof window !== 'undefined' && window.SYMPHONY_API) || '/api/stream';
 
 /* ============================================================
-   ORCHESTRATION — reveal the movements in sequence, driving the
-   field's phase as each voice takes the stage.
+   ORCHESTRATION
+   Harmony decides how each voice ENTERS:
+     materialize — arrives whole and fades in (dense text)
+     stagger     — parts appear one after another (the five framings)
+     type        — writes itself out (the voices about unfolding)
    ============================================================ */
 const $=id=>document.getElementById(id);
 const overture=$('overture'), performance=$('performance'), scroll=$('scroll'),
-      stagewrap=$('stagewrap'), loader=$('loader'), now=$('now'),
-      conductor=$('conductor'), adv=$('adv');
+      stagewrap=$('stagewrap'), now=$('now'), conductor=$('conductor'), adv=$('adv');
 
-// build conductor ticks
 AGENTS.forEach((a,i)=>{const t=document.createElement('div');t.className='tick';t.style.setProperty('--acc',a.css);t.id='tick'+i;conductor.appendChild(t);});
 
 const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-let program=null, idx=0, revealing=false, waiting=null;
+const ENTRANCE={ intel:'materialize', illusionist:'stagger', echo:'type',
+                 harmony:'materialize', guardian:'materialize', observer:'type' };
+const TYPE_MS={ echo:16, observer:34 };          // observer is slower — it's the last breath
+const ORDER=AGENTS.map(a=>a.key);
 
-function movementHTML(agent,data){
-  const d=data;
-  if(agent==='intel')      return `<div class="tag"><span class="n">i.</span> Intel</div><div class="body">${esc(d.intel)}</div>`;
-  if(agent==='illusionist')return `<div class="tag"><span class="n">ii.</span> Illusionist · five framings</div>`+
-      (d.illusionist||[]).map((f,i)=>`<div class="frame"><span class="fn">${i+1}</span><span>${esc(f)}</span></div>`).join('');
-  if(agent==='echo')       return `<div class="tag"><span class="n">iii.</span> Echo</div><div class="body">${esc(d.echo)}</div>`;
-  if(agent==='harmony')    return `<div class="tag"><span class="n">iv.</span> Harmony · the arrangement</div><div class="body">${esc(d.harmony)}</div>`;
-  if(agent==='guardian')   return `<div class="tag"><span class="n">v.</span> Guardian · the scattering</div>`+
-      `<div class="cap">“${esc(d.guardian?.title)}”</div><div class="body">${esc(d.guardian?.line)}</div>`;
-  if(agent==='observer')   return `<div class="q">${esc(d.observer).replace(/\?/,'<em>?</em>')}</div>`;
-}
+let queue=[], playing=false, aborter=null, lastProvider=null, finished=false;
 
-function revealNext(){
-  if(!program||idx>=AGENTS.length){ adv.classList.remove('show'); setPhase('rest'); now.innerHTML='&mdash; the shadow settles &mdash;'; now.style.setProperty('--acc','var(--observer)'); return; }
-  const a=AGENTS[idx];
-  setPhase(a.key);
-  now.innerHTML=`now playing · <b>${esc(a.label)}</b>`; now.style.setProperty('--acc',a.css);
-  $('tick'+idx).classList.add('on');
-  const el=document.createElement('div');
-  el.className='mv mv-'+ (a.key==='illusionist'?'illusion':a.key);
-  el.innerHTML=movementHTML(a.key,program);
-  stagewrap.appendChild(el);
-  requestAnimationFrame(()=>{el.classList.add('show'); el.scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'});});
-  idx++;
-  adv.classList.toggle('show', idx<AGENTS.length);
-  // auto-advance, but tapping the stage moves it along faster
-  const dwell = a.key==='illusionist'?6200 : a.key==='observer'?3000 : 4600;
-  clearTimeout(waiting); waiting=setTimeout(revealNext, reduced?2200:dwell);
-}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-async function perform(seedText){
-  seedText=(seedText||'').trim(); if(!seedText) return;
-  RAND=mulberry32(hashStr(seedText)()); flowSeed=RAND()*1000;
-  overture.classList.add('gone'); performance.classList.add('live');
-  stagewrap.innerHTML='<div class="loader" id="loader">tuning the instruments<div class="pulse" id="pulse">gathering the adjacencies</div></div>';
-  AGENTS.forEach((_,i)=>$('tick'+i)?.classList.remove('on'));
-  program=null; idx=0; now.innerHTML='&nbsp;';
-  setPhase('ambient');
-  const pulses=['gathering the adjacencies','splitting the framings','multiplying the echoes','composing the chaos','scattering the traces'];
-  let pi=0; const pulseEl=()=>document.getElementById('pulse'); 
-  const pulseTimer=setInterval(()=>{const p=pulseEl(); if(p){pi=(pi+1)%pulses.length; p.textContent=pulses[pi];}},1600);
-
-  try{
-    program=await generate(seedText);
-    clearInterval(pulseTimer);
-    stagewrap.innerHTML='';
-    revealNext();
-  }catch(e){
-    clearInterval(pulseTimer);
-    stagewrap.innerHTML=`<div class="loader err">the instruments fell silent.<div class="pulse">${esc(e.message||'the connection to the ensemble was lost')}</div></div>`;
-    setPhase('rest');
-    console.error(e);
+/* write text into a node one character at a time */
+let skipTyping=false;
+async function typeInto(node, text, ms){
+  if(reduced){ node.textContent=text; return; }
+  const chars=[...text];
+  for(let i=0;i<chars.length;i++){
+    if(skipTyping){ node.textContent=text; return; }
+    node.textContent+=chars[i];
+    // pause a beat longer on sentence ends and em dashes — it breathes
+    const c=chars[i];
+    await sleep(c==='—'?ms*6 : /[.?]/.test(c)?ms*5 : ms);
   }
 }
 
-// tap the stage to advance the performance
-scroll.addEventListener('click',()=>{ if(program&&idx<AGENTS.length){ clearTimeout(waiting); revealNext(); }});
+function shell(agent,i){
+  const el=document.createElement('div');
+  el.className='mv show mv-'+(agent==='illusionist'?'illusion':agent);
+  const labels={intel:'Intel',illusionist:'Illusionist · five framings',echo:'Echo',
+                harmony:'Harmony · the arrangement',guardian:'Guardian · the scattering',observer:''};
+  const num=['i.','ii.','iii.','iv.','v.','vi.'][i];
+  if(agent!=='observer') el.innerHTML=`<div class="tag"><span class="n">${num}</span> ${labels[agent]}</div>`;
+  stagewrap.appendChild(el);
+  return el;
+}
+
+async function playVoice(agent, content){
+  skipTyping=false;
+  const i=ORDER.indexOf(agent);
+  setPhase(agent);
+  const a=AGENTS[i];
+  now.innerHTML=`now playing · <b>${esc(a.label)}</b>`;
+  now.style.setProperty('--acc',a.css);
+  $('tick'+i)?.classList.add('on');
+
+  const el=shell(agent,i);
+  el.scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'});
+  const mode=ENTRANCE[agent];
+
+  if(agent==='illusionist'){
+    const frames=Array.isArray(content)?content:[];
+    for(let k=0;k<frames.length;k++){
+      const row=document.createElement('div');
+      row.className='frame';
+      row.style.opacity='0'; row.style.transition='opacity .7s ease, transform .7s ease';
+      row.style.transform='translateY(8px)';
+      row.innerHTML=`<span class="fn">${k+1}</span><span>${esc(frames[k])}</span>`;
+      el.appendChild(row);
+      requestAnimationFrame(()=>{row.style.opacity='1';row.style.transform='none';});
+      await sleep(reduced?120:520);
+    }
+  } else if(agent==='guardian'){
+    const g=content||{};
+    el.insertAdjacentHTML('beforeend',`<div class="cap">“${esc(g.title)}”</div><div class="body">${esc(g.line)}</div>`);
+  } else if(mode==='type'){
+    const node=document.createElement('div');
+    node.className = agent==='observer' ? 'q' : 'body';
+    el.appendChild(node);
+    await typeInto(node, String(content||''), TYPE_MS[agent]||20);
+    if(agent==='observer') node.innerHTML=node.textContent.replace(/\?/,'<em>?</em>');
+  } else {
+    el.insertAdjacentHTML('beforeend',`<div class="body">${esc(content)}</div>`);
+  }
+
+  el.scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'});
+  await sleep(reduced?300:900);           // let it land before the next voice
+}
+
+/* Voices arrive faster than they can be performed, so they queue.
+   This drains the queue one at a time, in order, never overlapping. */
+async function drain(){
+  if(playing) return;
+  playing=true;
+  while(queue.length){
+    const {agent,content}=queue.shift();
+    try{ await playVoice(agent,content); }catch(e){ console.error(e); }
+  }
+  playing=false;
+  if(finished){
+    adv.classList.remove('show');
+    setPhase('rest');
+    now.innerHTML='&mdash; the shadow settles &mdash;';
+    now.style.setProperty('--acc','var(--observer)');
+  }
+}
+
+scroll.addEventListener('click',()=>{ skipTyping=true; });
+
+async function perform(seedText){
+  seedText=(seedText||'').trim(); if(!seedText) return;
+  aborter?.abort();
+  RAND=mulberry32(hashStr(seedText)()); flowSeed=RAND()*1000;
+  overture.classList.add('gone'); performance.classList.add('live');
+  stagewrap.innerHTML='<div class="loader" id="loader">tuning the instruments<div class="pulse" id="pulse">listening for the first voice</div></div>';
+  AGENTS.forEach((_,i)=>$('tick'+i)?.classList.remove('on'));
+  queue=[]; playing=false; finished=false; lastProvider=null;
+  now.innerHTML='&nbsp;'; setPhase('ambient');
+
+  aborter=new AbortController();
+  let firstVoice=false;
+
+  try{
+    const res=await fetch(API,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({seed:seedText}), signal:aborter.signal
+    });
+    if(!res.ok||!res.body){
+      const j=await res.json().catch(()=>({}));
+      throw new Error(j.error||`the ensemble returned ${res.status}`);
+    }
+
+    const reader=res.body.getReader(), dec=new TextDecoder();
+    let buf='';
+    while(true){
+      const {done,value}=await reader.read();
+      if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const parts=buf.split('\n\n');
+      buf=parts.pop()??'';
+      for(const chunk of parts){
+        const line=chunk.trim();
+        if(!line.startsWith('data:')) continue;
+        const payload=line.slice(5).trim();
+        if(payload==='[DONE]') continue;
+        let ev; try{ ev=JSON.parse(payload); }catch{ continue; }
+
+        if(ev.type==='provider'){ lastProvider=ev.name; }
+        else if(ev.type==='agent'){
+          if(!firstVoice){ firstVoice=true; $('loader')?.remove(); adv.classList.add('show'); }
+          queue.push({agent:ev.agent,content:ev.content});
+          drain();
+        }
+        else if(ev.type==='error'){ throw new Error(ev.message); }
+      }
+    }
+    finished=true;
+    if(!firstVoice) throw new Error('no voices arrived');
+    drain();
+  }catch(e){
+    if(e.name==='AbortError') return;
+    finished=true;
+    if(!firstVoice){
+      stagewrap.innerHTML=`<div class="loader err">the instruments fell silent.<div class="pulse">${esc(e.message||'the connection to the ensemble was lost')}</div></div>`;
+      setPhase('rest');
+    }
+    console.error(e);
+  }
+}
 
 /* ---------- overture wiring ---------- */
 const SEEDS=['a locked door','the number 4','honey badger','my mother’s handwriting','the last photograph','silence','a borrowed name'];
@@ -396,8 +469,8 @@ const chips=$('chips');
 SEEDS.slice(0,4).forEach(s=>{const c=document.createElement('div');c.className='chip';c.textContent=s;c.onclick=()=>{$('seed').value=s;perform(s);};chips.appendChild(c);});
 $('go').onclick=()=>perform($('seed').value);
 $('seed').addEventListener('keydown',e=>{if(e.key==='Enter')perform($('seed').value);});
-$('replay').onclick=()=>perform($('seed').value|| (program? '' : '') || SEEDS[0]);
-$('newseed').onclick=()=>{ performance.classList.remove('live'); overture.classList.remove('gone'); $('seed').value=''; $('seed').focus(); clearTimeout(waiting); setPhase('ambient'); };
+$('replay').onclick=()=>perform($('seed').value||SEEDS[0]);
+$('newseed').onclick=()=>{ aborter?.abort(); queue=[]; performance.classList.remove('live'); overture.classList.remove('gone'); $('seed').value=''; $('seed').focus(); setPhase('ambient'); };
 
 /* ---------- boot ---------- */
 resize(); requestAnimationFrame(frame); setPhase('ambient');
