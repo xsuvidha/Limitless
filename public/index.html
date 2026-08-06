@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#07070b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Shadows" />
+<title>The Symphony of Shadows</title>
+
+<!-- Installable PWA manifest -->
+<link rel="manifest" href="./manifest.webmanifest" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Spectral:ital,wght@0,300;0,400;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --void:#07070b; --void2:#0c0d14; --veil:rgba(7,7,11,.55);
+    --bone:#e8e6df; --mist:#8f90a4; --dim:#54566a;
+    --intel:#d8c48a;      /* pale gold  — deduction     */
+    --illusion:#b98cd6;   /* muted violet — the framings */
+    --echo:#6fb7c9;       /* pale cyan — the multiplying */
+    --harmony:#a8c3b0;    /* sage — the arrangement      */
+    --guardian:#c97a6d;   /* ember — the scattering      */
+    --observer:#c9ccdc;   /* cool bone — the question    */
+    --line:rgba(232,230,223,.10);
+    --edge:rgba(232,230,223,.16);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:var(--void);color:var(--bone);
+    font-family:"Spectral",Georgia,serif;font-weight:300;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  #field{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 42%,transparent 40%,rgba(0,0,0,.55) 100%)}
+
+  .stage{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:max(28px,env(safe-area-inset-top)) 22px max(28px,env(safe-area-inset-bottom));overflow:hidden}
+
+  /* ---- Overture (seed entry) ---- */
+  .overture{max-width:560px;width:100%;text-align:center;transition:opacity 1.1s ease,transform 1.1s ease}
+  .overture.gone{opacity:0;transform:translateY(-14px) scale(.99);pointer-events:none;position:absolute}
+  .kicker{font-family:"JetBrains Mono",monospace;font-weight:300;font-size:11px;letter-spacing:.42em;
+    text-transform:uppercase;color:var(--dim);margin-bottom:26px}
+  .kicker span{color:var(--intel)}
+  h1{font-family:"Fraunces",serif;font-weight:300;font-optical-sizing:auto;line-height:.98;
+    font-size:clamp(38px,12vw,74px);letter-spacing:-.01em;margin-bottom:6px}
+  h1 em{font-style:italic;color:var(--illusion)}
+  .sub{font-style:italic;color:var(--mist);font-size:clamp(14px,4vw,17px);margin-bottom:40px;letter-spacing:.01em}
+  .seedwrap{position:relative;display:flex;align-items:center;gap:12px;
+    border-bottom:1px solid var(--edge);padding:10px 4px;transition:border-color .5s}
+  .seedwrap:focus-within{border-color:var(--intel)}
+  .seedwrap::before{content:"◈";color:var(--intel);opacity:.6;font-size:13px}
+  #seed{flex:1;background:none;border:none;outline:none;color:var(--bone);
+    font-family:"Fraunces",serif;font-weight:300;font-size:clamp(19px,6vw,26px);letter-spacing:.01em}
+  #seed::placeholder{color:var(--dim);font-style:italic}
+  .perform{margin-top:34px;background:none;color:var(--bone);cursor:pointer;
+    font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.34em;text-transform:uppercase;
+    border:1px solid var(--edge);border-radius:100px;padding:15px 30px;transition:.4s;position:relative;overflow:hidden}
+  .perform:hover,.perform:active{border-color:var(--intel);color:var(--intel);letter-spacing:.4em}
+  .perform:disabled{opacity:.4;pointer-events:none}
+  .seeds{margin-top:26px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .chip{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.05em;color:var(--mist);
+    border:1px solid var(--line);border-radius:100px;padding:7px 13px;cursor:pointer;transition:.3s}
+  .chip:hover,.chip:active{color:var(--bone);border-color:var(--edge)}
+
+  /* ---- Performance (the six movements) ---- */
+  .performance{position:absolute;inset:0;z-index:2;display:none;flex-direction:column;
+    padding:max(20px,env(safe-area-inset-top)) 0 max(16px,env(safe-area-inset-bottom))}
+  .performance.live{display:flex}
+
+  .conductor{display:flex;align-items:center;gap:0;padding:6px 22px 2px;flex-wrap:nowrap}
+  .tick{flex:1;height:2px;background:var(--line);position:relative;border-radius:2px;transition:background .6s}
+  .tick+.tick{margin-left:6px}
+  .tick.on{background:var(--acc,var(--bone))}
+  .now{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--mist);padding:12px 22px 4px;min-height:34px;transition:color .5s}
+  .now b{color:var(--acc,var(--bone));font-weight:400}
+
+  .scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:6px 22px 40px;-webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+  .scroll::-webkit-scrollbar{width:0}
+  .stagewrap{max-width:640px;margin:0 auto}
+
+  .mv{opacity:0;transform:translateY(16px);transition:opacity 1s ease,transform 1s ease;margin:0 0 34px}
+  .mv.show{opacity:1;transform:none}
+  .mv .tag{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--acc);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+  .mv .tag::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--acc),transparent);opacity:.3}
+  .mv .tag .n{opacity:.5}
+
+  .mv-intel{--acc:var(--intel)}
+  .mv-intel .body{font-family:"JetBrains Mono",monospace;font-weight:300;font-size:14px;line-height:1.9;color:#cfc8ae}
+  .mv-illusion{--acc:var(--illusion)}
+  .frame{display:flex;gap:14px;margin:0 0 15px;font-size:17px;line-height:1.5}
+  .frame .fn{font-family:"Fraunces",serif;font-style:italic;font-size:22px;color:var(--illusion);opacity:.7;min-width:26px;line-height:1.2}
+  .mv-echo{--acc:var(--echo)}
+  .mv-echo .body{font-style:italic;font-size:17px;line-height:1.75;color:#cfe2e8}
+  .mv-harmony{--acc:var(--harmony)}
+  .mv-harmony .body{font-size:16.5px;line-height:1.8;color:#dbe6dd}
+  .dyn{font-family:"JetBrains Mono",monospace;font-style:normal;color:var(--harmony);opacity:.75;font-size:13px}
+  .mv-guardian{--acc:var(--guardian)}
+  .mv-guardian .cap{font-family:"Fraunces",serif;font-style:italic;font-size:22px;color:var(--guardian);margin-bottom:8px}
+  .mv-guardian .body{font-size:16px;line-height:1.7;color:#e2c6bf}
+  .mv-observer{--acc:var(--observer)}
+  .mv-observer{margin-top:6px;padding-top:26px;border-top:1px solid var(--line)}
+  .mv-observer .q{font-family:"Fraunces",serif;font-weight:300;font-size:clamp(21px,6.2vw,30px);
+    line-height:1.32;color:var(--bone);letter-spacing:-.005em}
+  .mv-observer .q em{font-style:italic;color:var(--observer)}
+
+  .foot{display:flex;gap:10px;justify-content:center;padding:4px 22px 2px;flex-wrap:wrap}
+  .foot button{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--mist);background:none;border:1px solid var(--line);border-radius:100px;padding:11px 20px;cursor:pointer;transition:.35s}
+  .foot button:hover,.foot button:active{color:var(--bone);border-color:var(--edge)}
+
+  .loader{text-align:center;color:var(--mist);font-style:italic;font-size:15px;letter-spacing:.02em;
+    padding:60px 22px;transition:opacity .5s}
+  .loader .pulse{font-family:"JetBrains Mono",monospace;font-style:normal;font-size:10px;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--dim);margin-top:14px}
+  .loader.hide{display:none}
+  .err{color:var(--guardian)}
+
+  .adv{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 62px);left:50%;transform:translateX(-50%);
+    font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--dim);
+    pointer-events:none;opacity:0;transition:opacity .6s;animation:breathe 2.6s ease-in-out infinite}
+  .adv.show{opacity:.7}
+  @keyframes breathe{0%,100%{opacity:.25}50%{opacity:.75}}
+
+  @media (max-width:420px){ .scroll{padding-left:18px;padding-right:18px} .conductor,.now{padding-left:18px;padding-right:18px} }
+  @media (prefers-reduced-motion:reduce){ *{animation-duration:.001ms!important;transition-duration:.2s!important} }
+</style>
+</head>
+<body>
+<canvas id="field"></canvas>
+<div class="grain"></div>
+<div class="vignette"></div>
+
+<div class="stage">
+  <!-- OVERTURE -->
+  <div class="overture" id="overture">
+    <div class="kicker">A multi&#8209;agent meditation · <span>six voices, one seed</span></div>
+    <h1>The Symphony<br>of <em>Shadows</em></h1>
+    <p class="sub">Offer a single thing. Watch its truth refuse to settle.</p>
+    <div class="seedwrap">
+      <input id="seed" autocomplete="off" spellcheck="false" placeholder="a locked door · the number 4 · honey badger…" />
+    </div>
+    <button class="perform" id="go">Begin the performance</button>
+    <div class="seeds" id="chips"></div>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div class="performance" id="performance">
+    <div class="conductor" id="conductor"></div>
+    <div class="now" id="now">&nbsp;</div>
+    <div class="scroll" id="scroll">
+      <div class="stagewrap" id="stagewrap">
+        <div class="loader" id="loader">tuning the instruments<div class="pulse" id="pulse">gathering the adjacencies</div></div>
+      </div>
+    </div>
+    <div class="adv" id="adv">tap to advance</div>
+    <div class="foot">
+      <button id="replay">Perform again</button>
+      <button id="newseed">New seed</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   THE SYMPHONY OF SHADOWS
+   One file. Six agents. A living shadow driven by meaning.
+   ------------------------------------------------------------
+   GENERATION: the demo path below calls the one model reachable
+   keylessly inside this sandbox. For production, replace the body
+   of generate() with a single fetch to YOUR provider-failover
+   proxy (see symphony-proxy.js). Nothing else needs to change.
+   ============================================================ */
+
+const AGENTS = [
+  {key:'intel',      label:'Intel · the adjacencies',   css:'var(--intel)'},
+  {key:'illusionist',label:'Illusionist · the framings', css:'var(--illusion)'},
+  {key:'echo',       label:'Echo · the refusal to close', css:'var(--echo)'},
+  {key:'harmony',    label:'Harmony · the arrangement',  css:'var(--harmony)'},
+  {key:'guardian',   label:'Guardian · the scattering',  css:'var(--guardian)'},
+  {key:'observer',   label:'Observer · the question',    css:'var(--observer)'},
+];
+
+/* ---------- seeded PRNG so a seed word owns its own shadow ---------- */
+function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=(h<<13)|(h>>>19);}return()=>{h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);return((h^=h>>>16)>>>0);};}
+function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
+let RAND=mulberry32(123456);
+
+/* ============================================================
+   UMBRAL DRIFT — the generative field
+   Traces move through a flow field whose character is set by
+   whichever agent is currently playing. State is interpolated
+   so every transition is a dissolve, never a cut.
+   ============================================================ */
+const cv=document.getElementById('field'), ctx=cv.getContext('2d');
+let W,H,DPR,traces=[],attractors=[],reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+let flowSeed=Math.random()*1000, tGlobal=0;
+
+// live phase parameters (smoothly lerped toward target)
+const P={ curl:1, drift:0, spread:0, damp:0.94, glow:.55, speed:1, split:0, ghost:.045, jitter:0, hue:'#7a7f9a', turb:0 };
+const TARGET={...P};
+
+function setPhase(name){
+  const base={curl:1,drift:0,spread:0,damp:.94,glow:.5,speed:1,split:0,ghost:.05,jitter:0,turb:0,hue:'#5a5f78'};
+  const map={
+    ambient:  {...base, speed:.55, glow:.4, ghost:.05, hue:'#5a5f78'},
+    intel:    {...base, drift:.9, damp:.9, glow:.6, ghost:.055, hue:'#d8c48a'},          // converge (attractors on)
+    illusionist:{...base, split:1, spread:.6, speed:.9, glow:.55, ghost:.05, hue:'#b98cd6'}, // five streams
+    echo:     {...base, ghost:.014, glow:.75, curl:1.6, speed:1.05, hue:'#6fb7c9'},      // ghosts multiply (low fade)
+    harmony:  {...base, curl:.35, drift:.5, damp:.965, glow:.6, ghost:.045, hue:'#a8c3b0'}, // laminar bands
+    guardian: {...base, turb:1, jitter:1, spread:1.4, speed:1.5, glow:.9, ghost:.08, hue:'#c97a6d'}, // detonate
+    observer: {...base, speed:.28, damp:.985, curl:.5, glow:.45, ghost:.05, hue:'#c9ccdc'},// stillness
+    rest:     {...base, speed:.4, glow:.38, hue:'#5a5f78'},
+  };
+  Object.assign(TARGET, map[name]||base);
+  attractors = [];
+  if(name==='intel'){ for(let i=0;i<3;i++) attractors.push({x:(.3+.2*i)*W,y:H*(.42+.12*Math.sin(i*2)),k:1}); }
+  if(name==='illusionist'){ for(let i=0;i<5;i++){const a=(i/5)*Math.PI*2; attractors.push({x:W/2+Math.cos(a)*W*.32,y:H*.5+Math.sin(a)*H*.28,k:.7});} }
+  if(name==='observer'){ attractors.push({x:W/2,y:H*.46,k:.6}); }
+  if(name==='guardian'){ traces.forEach(t=>{const a=Math.random()*Math.PI*2,s=(4+Math.random()*7)*(reduced?.4:1); t.vx+=Math.cos(a)*s; t.vy+=Math.sin(a)*s;}); }
+}
+
+function lerpHex(a,b,t){const pa=[parseInt(a.slice(1,3),16),parseInt(a.slice(3,5),16),parseInt(a.slice(5,7),16)];const pb=[parseInt(b.slice(1,3),16),parseInt(b.slice(3,5),16),parseInt(b.slice(5,7),16)];return[pa[0]+(pb[0]-pa[0])*t,pa[1]+(pb[1]-pa[1])*t,pa[2]+(pb[2]-pa[2])*t];}
+
+class Trace{
+  constructor(){this.reset(true);}
+  reset(rand){this.x=RAND()*W;this.y=RAND()*H;this.vx=0;this.vy=0;this.life=RAND()*1;
+    this.hue=RAND();this.band=Math.floor(RAND()*5);this.w=.6+RAND()*1.1;}
+  step(){
+    // flow angle from cheap layered value-noise
+    const nx=this.x*0.0016, ny=this.y*0.0016, tt=tGlobal*0.0006*P.speed;
+    let ang=(Math.sin(nx*1.7+tt)+Math.cos(ny*1.9-tt*1.3)+Math.sin((nx+ny)*1.1+tt*.7))*P.curl;
+    // splitting into five directional basins (Illusionist)
+    if(P.split>0.02){const target=(this.band/5)*Math.PI*2; ang=ang*(1-P.split)+target*P.split;}
+    // laminar drift (Harmony) / gentle global current
+    ang+=P.drift*Math.sin(ny*0.6+flowSeed);
+    // turbulence burst (Guardian)
+    if(P.turb>0.02){ang+=(RAND()-.5)*8*P.turb;}
+    let ax=Math.cos(ang), ay=Math.sin(ang);
+    // attractors (Intel converge / Observer settle)
+    for(const at of attractors){const dx=at.x-this.x,dy=at.y-this.y,d=Math.hypot(dx,dy)+1;const f=at.k*P.drift*40/d;ax+=dx/d*f;ay+=dy/d*f;}
+    // jitter
+    if(P.jitter>0.02){ax+=(RAND()-.5)*P.jitter*2;ay+=(RAND()-.5)*P.jitter*2;}
+    const sp=(reduced?.5:1.4)*P.speed*(1+P.spread*.4);
+    this.vx=(this.vx+ax*sp)*P.damp; this.vy=(this.vy+ay*sp)*P.damp;
+    const px=this.x,py=this.y; this.x+=this.vx; this.y+=this.vy;
+    // wrap
+    if(this.x<-10)this.x=W+10; if(this.x>W+10)this.x=-10; if(this.y<-10)this.y=H+10; if(this.y>H+10)this.y=-10;
+    if(Math.abs(this.x-px)>W*.5||Math.abs(this.y-py)>H*.5)return; // don't draw the wrap seam
+    const [r,g,b]=lerpHex('#e8e6df',P.hue,.55+this.hue*.4);
+    ctx.strokeStyle=`rgba(${r|0},${g|0},${b|0},${(.14+P.glow*.5)})`;
+    ctx.lineWidth=this.w*(reduced?1:(1+P.turb));
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(this.x,this.y);ctx.stroke();
+  }
+}
+
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+'px'; cv.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle='#07070b'; ctx.fillRect(0,0,W,H);
+  const n=reduced?70:(W<520?150:300);
+  traces=Array.from({length:n},()=>new Trace());
+}
+addEventListener('resize',resize);
+
+function frame(){
+  tGlobal++;
+  // interpolate phase params
+  for(const k in TARGET){ if(k==='hue')continue; P[k]+=(TARGET[k]-P[k])*0.045; }
+  P.hue = '#'+lerpHex(P.hue,TARGET.hue,0.045).map(v=>('0'+(v|0).toString(16)).slice(-2)).join('');
+  // fade for trails (Echo lowers this so ghosts persist)
+  ctx.fillStyle=`rgba(7,7,11,${P.ghost})`; ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation = reduced?'source-over':'lighter';
+  for(const t of traces) t.step();
+  ctx.globalCompositeOperation='source-over';
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================
+   GENERATION
+   ============================================================ */
+const SYS = `You are The Symphony of Shadows, a six-voice meditation engine. Given ONE seed, return a compact, potent performance as STRICT JSON only — no prose, no markdown, no code fences. Keep every field tight; this is read on a phone.
+
+Ethics you keep silently: work only with the seed as an idea/object/concept. Intel synthesizes culture, history, etymology, science, folklore — connections about the human condition, never a dossier on a real named individual. Illusions are declared art.
+
+Return exactly this shape:
+{
+ "intel": "3-4 short sentences of forensic connective tissue: buried etymology, history, science, a disputed fact, an unexpected adjacency. Dense. End with a fragment listing the threads found.",
+ "illusionist": ["five framings", "each ONE sentence", "internally coherent", "mutually irreconcilable", "no framing can be reconciled with another"],
+ "echo": "one flowing passage, clauses chained by em dashes, each turning the previous reading against itself, refusing to let any interpretation close — 3 to 5 clauses.",
+ "harmony": "the arrangement as a conductor's note: where to begin soft, where to swell, where to hold silence, where to close. Use dynamics words. 2-3 sentences.",
+ "guardian": {"title":"a two-to-four word title for an abstract noise-artwork of this seed dissolving", "line":"one sentence naming what the image is about — erasure, trace, disappearance"},
+ "observer": "the closing question, grounded in THIS specific seed, about truth being a story we bring to the thing. One or two sentences. Provocative, calm."
+}`;
+
+// Same-origin in production. Override for local dev by setting
+// window.SYMPHONY_API = "http://localhost:8787/api/symphony" before this script.
+const API = (typeof window !== 'undefined' && window.SYMPHONY_API) || '/api/symphony';
+
+async function generate(seedText){
+  const ctrl = new AbortController();
+  const deadline = setTimeout(()=>ctrl.abort(), 30000);   // never hang forever
+  try{
+    const r = await fetch(API,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ seed:seedText }),
+      signal:ctrl.signal
+    });
+    if(!r.ok){
+      const e = await r.json().catch(()=>({}));
+      throw new Error(e.error || `the ensemble returned ${r.status}`);
+    }
+    const { text, provider } = await r.json();
+    lastProvider = provider || null;
+    const c = String(text).replace(/```json|```/g,"").trim();
+    return JSON.parse(c.slice(c.indexOf("{"), c.lastIndexOf("}")+1));
+  } finally {
+    clearTimeout(deadline);
+  }
+}
+let lastProvider = null;
+
+/* ============================================================
+   ORCHESTRATION — reveal the movements in sequence, driving the
+   field's phase as each voice takes the stage.
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const overture=$('overture'), performance=$('performance'), scroll=$('scroll'),
+      stagewrap=$('stagewrap'), loader=$('loader'), now=$('now'),
+      conductor=$('conductor'), adv=$('adv');
+
+// build conductor ticks
+AGENTS.forEach((a,i)=>{const t=document.createElement('div');t.className='tick';t.style.setProperty('--acc',a.css);t.id='tick'+i;conductor.appendChild(t);});
+
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let program=null, idx=0, revealing=false, waiting=null;
+
+function movementHTML(agent,data){
+  const d=data;
+  if(agent==='intel')      return `<div class="tag"><span class="n">i.</span> Intel</div><div class="body">${esc(d.intel)}</div>`;
+  if(agent==='illusionist')return `<div class="tag"><span class="n">ii.</span> Illusionist · five framings</div>`+
+      (d.illusionist||[]).map((f,i)=>`<div class="frame"><span class="fn">${i+1}</span><span>${esc(f)}</span></div>`).join('');
+  if(agent==='echo')       return `<div class="tag"><span class="n">iii.</span> Echo</div><div class="body">${esc(d.echo)}</div>`;
+  if(agent==='harmony')    return `<div class="tag"><span class="n">iv.</span> Harmony · the arrangement</div><div class="body">${esc(d.harmony)}</div>`;
+  if(agent==='guardian')   return `<div class="tag"><span class="n">v.</span> Guardian · the scattering</div>`+
+      `<div class="cap">“${esc(d.guardian?.title)}”</div><div class="body">${esc(d.guardian?.line)}</div>`;
+  if(agent==='observer')   return `<div class="q">${esc(d.observer).replace(/\?/,'<em>?</em>')}</div>`;
+}
+
+function revealNext(){
+  if(!program||idx>=AGENTS.length){ adv.classList.remove('show'); setPhase('rest'); now.innerHTML='&mdash; the shadow settles &mdash;'; now.style.setProperty('--acc','var(--observer)'); return; }
+  const a=AGENTS[idx];
+  setPhase(a.key);
+  now.innerHTML=`now playing · <b>${esc(a.label)}</b>`; now.style.setProperty('--acc',a.css);
+  $('tick'+idx).classList.add('on');
+  const el=document.createElement('div');
+  el.className='mv mv-'+ (a.key==='illusionist'?'illusion':a.key);
+  el.innerHTML=movementHTML(a.key,program);
+  stagewrap.appendChild(el);
+  requestAnimationFrame(()=>{el.classList.add('show'); el.scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'});});
+  idx++;
+  adv.classList.toggle('show', idx<AGENTS.length);
+  // auto-advance, but tapping the stage moves it along faster
+  const dwell = a.key==='illusionist'?6200 : a.key==='observer'?3000 : 4600;
+  clearTimeout(waiting); waiting=setTimeout(revealNext, reduced?2200:dwell);
+}
+
+async function perform(seedText){
+  seedText=(seedText||'').trim(); if(!seedText) return;
+  RAND=mulberry32(hashStr(seedText)()); flowSeed=RAND()*1000;
+  overture.classList.add('gone'); performance.classList.add('live');
+  stagewrap.innerHTML='<div class="loader" id="loader">tuning the instruments<div class="pulse" id="pulse">gathering the adjacencies</div></div>';
+  AGENTS.forEach((_,i)=>$('tick'+i)?.classList.remove('on'));
+  program=null; idx=0; now.innerHTML='&nbsp;';
+  setPhase('ambient');
+  const pulses=['gathering the adjacencies','splitting the framings','multiplying the echoes','composing the chaos','scattering the traces'];
+  let pi=0; const pulseEl=()=>document.getElementById('pulse'); 
+  const pulseTimer=setInterval(()=>{const p=pulseEl(); if(p){pi=(pi+1)%pulses.length; p.textContent=pulses[pi];}},1600);
+
+  try{
+    program=await generate(seedText);
+    clearInterval(pulseTimer);
+    stagewrap.innerHTML='';
+    revealNext();
+  }catch(e){
+    clearInterval(pulseTimer);
+    stagewrap.innerHTML=`<div class="loader err">the instruments fell silent.<div class="pulse">${esc(e.message||'the connection to the ensemble was lost')}</div></div>`;
+    setPhase('rest');
+    console.error(e);
+  }
+}
+
+// tap the stage to advance the performance
+scroll.addEventListener('click',()=>{ if(program&&idx<AGENTS.length){ clearTimeout(waiting); revealNext(); }});
+
+/* ---------- overture wiring ---------- */
+const SEEDS=['a locked door','the number 4','honey badger','my mother’s handwriting','the last photograph','silence','a borrowed name'];
+const chips=$('chips');
+SEEDS.slice(0,4).forEach(s=>{const c=document.createElement('div');c.className='chip';c.textContent=s;c.onclick=()=>{$('seed').value=s;perform(s);};chips.appendChild(c);});
+$('go').onclick=()=>perform($('seed').value);
+$('seed').addEventListener('keydown',e=>{if(e.key==='Enter')perform($('seed').value);});
+$('replay').onclick=()=>perform($('seed').value|| (program? '' : '') || SEEDS[0]);
+$('newseed').onclick=()=>{ performance.classList.remove('live'); overture.classList.remove('gone'); $('seed').value=''; $('seed').focus(); clearTimeout(waiting); setPhase('ambient'); };
+
+/* ---------- boot ---------- */
+resize(); requestAnimationFrame(frame); setPhase('ambient');
+
+// PWA service worker — silently no-ops inside sandboxed previews,
+// registers for real when this file is hosted at a URL alongside sw.js
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+</script>
+</body>
+</html>

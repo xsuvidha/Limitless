@@ -1,0 +1,15 @@
+{
+  "name": "limitless-symphony",
+  "version": "1.0.0",
+  "description": "The Symphony of Shadows — a six-voice meditation engine on perception, complexity, and truth.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node --env-file=.env dev-server.js",
+    "start": "node dev-server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": { "node": ">=20" }
+}
