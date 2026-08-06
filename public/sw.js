@@ -1,7 +1,7 @@
 /* Symphony of Shadows — offline shell.
    Cache-first for the app itself; network for generation calls. */
-const CACHE = 'shadows-v1';
-const SHELL = ['./', './symphony-of-shadows.html'];
+const CACHE = 'limitless-v2';
+const SHELL = ['./', './index.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -20,6 +20,6 @@ self.addEventListener('fetch', e => {
       const copy = res.clone();
       if (e.request.method === 'GET' && res.ok) caches.open(CACHE).then(c => c.put(e.request, copy));
       return res;
-    }).catch(() => caches.match('./symphony-of-shadows.html')))
+    }).catch(() => caches.match('./index.html')))
   );
 });

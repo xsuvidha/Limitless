@@ -1,6 +1,6 @@
 {
-  "name": "The Symphony of Shadows",
-  "short_name": "Shadows",
+  "name": "Limitless — The Symphony of Shadows",
+  "short_name": "Limitless",
   "description": "Offer a single seed. Watch its truth refuse to settle.",
   "start_url": "/",
   "scope": "/",
@@ -8,8 +8,17 @@
   "orientation": "portrait",
   "background_color": "#07070b",
   "theme_color": "#07070b",
-  "categories": ["art", "education", "lifestyle"],
+  "categories": [
+    "art",
+    "education",
+    "lifestyle"
+  ],
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
