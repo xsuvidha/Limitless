@@ -145,8 +145,12 @@
   .sheet{position:fixed;inset:0;z-index:20;background:rgba(4,4,7,.86);
     backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     display:flex;align-items:center;justify-content:center;padding:16px;
-    opacity:0;transition:opacity .35s ease}
-  .sheet.show{opacity:1}
+    opacity:0;pointer-events:none;transition:opacity .35s ease}
+  /* [hidden] only sets display:none in the UA sheet — a class rule with
+     display:flex beats it. Without this the panel stays over the page,
+     invisible but still swallowing every click. */
+  .sheet[hidden]{display:none}
+  .sheet.show{opacity:1;pointer-events:auto}
   .sheetInner{width:100%;max-width:460px;max-height:94vh;display:flex;flex-direction:column;gap:12px}
   .sheetHead{display:flex;align-items:center;justify-content:space-between;
     font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.3em;
