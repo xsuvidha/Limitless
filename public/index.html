@@ -132,10 +132,47 @@
     font-size:clamp(16px,4.6vw,19px);line-height:1.55;color:#c9d4cc}
 
   /* the named absence */
-  .silence{opacity:0;transition:opacity 1.4s ease;margin:26px 0 4px;text-align:center;
-    font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.26em;
-    text-transform:lowercase;color:var(--dim)}
-  .silence.show{opacity:.85}
+  .silence{opacity:0;transition:opacity 1.6s ease;margin:38px 0 8px;text-align:center;
+    padding-top:26px;border-top:1px solid var(--line);
+    font-family:"Fraunces",serif;font-style:italic;font-weight:300;
+    font-size:clamp(15px,4.2vw,18px);letter-spacing:.01em;color:var(--mist)}
+  .silence.show{opacity:.9}
+
+  /* ---- the artifact sheet ---- */
+  .foot button.primary{color:var(--bone);border-color:var(--edge)}
+  .foot button.primary:hover,.foot button.primary:active{color:var(--intel);border-color:var(--intel)}
+
+  .sheet{position:fixed;inset:0;z-index:20;background:rgba(4,4,7,.86);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    display:flex;align-items:center;justify-content:center;padding:16px;
+    opacity:0;transition:opacity .35s ease}
+  .sheet.show{opacity:1}
+  .sheetInner{width:100%;max-width:460px;max-height:94vh;display:flex;flex-direction:column;gap:12px}
+  .sheetHead{display:flex;align-items:center;justify-content:space-between;
+    font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--mist)}
+  .sheetHead button{background:none;border:none;color:var(--mist);font-size:26px;
+    line-height:1;cursor:pointer;padding:0 4px}
+  .sheetHead button:hover{color:var(--bone)}
+
+  .pickRow{display:flex;gap:7px;flex-wrap:wrap}
+  .pick{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;
+    text-transform:lowercase;color:var(--mist);background:none;border:1px solid var(--line);
+    border-radius:100px;padding:8px 13px;cursor:pointer;transition:.28s;white-space:nowrap}
+  .pick:hover{color:var(--bone);border-color:var(--edge)}
+  .pick.on{color:var(--void);background:var(--bone);border-color:var(--bone)}
+
+  .preview{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#050508}
+  .preview canvas{max-width:100%;max-height:100%;display:block;object-fit:contain}
+
+  .sheetFoot{display:flex;gap:9px}
+  .sheetFoot button{flex:1;font-family:"JetBrains Mono",monospace;font-size:11px;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--mist);background:none;
+    border:1px solid var(--line);border-radius:100px;padding:14px;cursor:pointer;transition:.3s}
+  .sheetFoot button:hover{color:var(--bone);border-color:var(--edge)}
+  .sheetFoot button.primary{color:var(--bone);border-color:var(--edge)}
+  .sheetFoot button.primary:hover{color:var(--intel);border-color:var(--intel)}
 
   .foot{display:flex;gap:10px;justify-content:center;padding:4px 22px 2px;flex-wrap:wrap}
   .foot button{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.24em;text-transform:uppercase;
@@ -189,8 +226,29 @@
     </div>
     <div class="adv" id="adv">tap to hasten</div>
     <div class="foot">
+      <button id="keep" class="primary" hidden>Keep this shadow</button>
       <button id="replay">Perform again</button>
       <button id="newseed">New seed</button>
+    </div>
+  </div>
+</div>
+
+<!-- THE ARTIFACT — a performance made portable -->
+<div class="sheet" id="sheet" hidden>
+  <div class="sheetInner">
+    <div class="sheetHead">
+      <span>keep this shadow</span>
+      <button id="sheetClose" aria-label="close">&times;</button>
+    </div>
+
+    <div class="pickRow" id="fmtRow"></div>
+    <div class="pickRow" id="voiceRow"></div>
+
+    <div class="preview"><canvas id="card"></canvas></div>
+
+    <div class="sheetFoot">
+      <button id="dl" class="primary">Download</button>
+      <button id="share" hidden>Share</button>
     </div>
   </div>
 </div>
@@ -735,6 +793,7 @@ async function drain(){
     adv.classList.remove('show');
     setPhase('rest');
     showSilences(score?.withhold);
+    if(Object.keys(captured.voices).length) $('keep').hidden=false;
     now.innerHTML='&mdash; the shadow settles &mdash;';
     now.style.setProperty('--acc','var(--observer)');
   }
@@ -752,6 +811,7 @@ async function perform(seedText){
   AGENTS.forEach((_,i)=>$('tick'+i)?.classList.remove('on'));
   queue=[]; playing=false; finished=false; lastProvider=null;
   score=null; played=0; buildTicks(AGENTS.map(a=>a.key));
+  captured={seed:seedText,note:'',voices:{}}; $('keep').hidden=true;
   now.innerHTML='&nbsp;'; setPhase('ambient');
 
   aborter=new AbortController();
@@ -784,13 +844,14 @@ async function perform(seedText){
 
         if(ev.type==='provider'){ lastProvider=ev.name; }
         else if(ev.type==='score'){
-          score=ev;
+          score=ev; captured.note=ev.note||'';
           buildTicks(ev.order||[]);
           if(!firstVoice){ firstVoice=true; $('loader')?.remove(); adv.classList.add('show'); }
           showProgramme(ev.note);
         }
         else if(ev.type==='agent'){
           if(!firstVoice){ firstVoice=true; $('loader')?.remove(); adv.classList.add('show'); }
+          captured.voices[ev.agent]=ev.content;
           queue.push({agent:ev.agent,content:ev.content});
           drain();
         }
@@ -819,6 +880,211 @@ $('go').onclick=()=>perform($('seed').value);
 $('seed').addEventListener('keydown',e=>{if(e.key==='Enter')perform($('seed').value);});
 $('replay').onclick=()=>perform($('seed').value||SEEDS[0]);
 $('newseed').onclick=()=>{ aborter?.abort(); queue=[]; performance.classList.remove('live'); overture.classList.remove('gone'); $('seed').value=''; $('seed').focus(); setPhase('ambient'); };
+
+/* ============================================================
+   THE ARTIFACT
+   A performance made portable: capture the field, set the words
+   on it, export something a person can actually post.
+   ============================================================ */
+
+const FORMATS={
+  square:{w:1080,h:1080,label:'square · feed'},
+  story: {w:1080,h:1920,label:'story · reel'},
+  wide:  {w:1200,h:675, label:'wide · x'},
+};
+const VOICE_LABEL={intel:'Intel',illusionist:'Illusionist',echo:'Echo',
+  guardian:'Guardian',heretic:'Heretic',observer:'Observer'};
+
+let captured={seed:'',note:'',voices:{}};
+let cardFmt='square', cardVoice='observer';
+
+/* ---- pull the field off the GPU ----
+   readPixels from the accumulation FBO rather than the visible canvas:
+   it persists, so we don't need preserveDrawingBuffer (which costs
+   performance on every frame just to make capture possible).        */
+function captureField(){
+  const c=document.createElement('canvas');
+  c.width=cv.width; c.height=cv.height;
+  const cx=c.getContext('2d');
+  if(GL){
+    try{
+      const {gl,fbo}=GL, w=cv.width, h=cv.height;
+      const px=new Uint8Array(w*h*4);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+      gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,px);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+      const img=cx.createImageData(w,h);
+      for(let y=0;y<h;y++){                       // GL's origin is bottom-left; canvas is top-left
+        const src=(h-1-y)*w*4, dst=y*w*4;
+        img.data.set(px.subarray(src,src+w*4),dst);
+      }
+      for(let i=3;i<img.data.length;i+=4) img.data[i]=255;   // force opaque
+      cx.putImageData(img,0,0);
+      return c;
+    }catch(e){ console.warn('capture:',e); }
+  }
+  try{ cx.drawImage(cv,0,0); }catch(e){ cx.fillStyle='#07070b'; cx.fillRect(0,0,c.width,c.height); }
+  return c;
+}
+
+function wrapText(cx,text,maxW){
+  const words=String(text).split(/\s+/), lines=[];
+  let line='';
+  for(const w of words){
+    const test=line?line+' '+w:w;
+    if(cx.measureText(test).width>maxW && line){ lines.push(line); line=w; }
+    else line=test;
+  }
+  if(line) lines.push(line);
+  return lines;
+}
+
+/* pick the text for the chosen voice, flattened to something printable */
+function voiceText(key){
+  const v=captured.voices[key];
+  if(v==null) return '';
+  if(typeof v==='string') return v;
+  if(Array.isArray(v)) return v[0]||'';                 // one framing reads better than five
+  if(v.title) return v.line?`“${v.title}” — ${v.line}`:`“${v.title}”`;
+  return '';
+}
+
+async function composeCard(){
+  const F=FORMATS[cardFmt];
+  const card=$('card');
+  card.width=F.w; card.height=F.h;
+  const cx=card.getContext('2d');
+  const pad=Math.round(F.w*0.085);
+
+  // --- field as ground, scaled to cover ---
+  const field=captureField();
+  const sc=Math.max(F.w/field.width, F.h/field.height);
+  const dw=field.width*sc, dh=field.height*sc;
+  cx.fillStyle='#07070b'; cx.fillRect(0,0,F.w,F.h);
+  cx.drawImage(field,(F.w-dw)/2,(F.h-dh)/2,dw,dh);
+
+  // --- darken so type can breathe ---
+  const g=cx.createLinearGradient(0,0,0,F.h);
+  g.addColorStop(0,'rgba(7,7,11,.62)');
+  g.addColorStop(.42,'rgba(7,7,11,.40)');
+  g.addColorStop(1,'rgba(7,7,11,.94)');
+  cx.fillStyle=g; cx.fillRect(0,0,F.w,F.h);
+
+  const rg=cx.createRadialGradient(F.w/2,F.h*.42,0,F.w/2,F.h*.42,Math.max(F.w,F.h)*.75);
+  rg.addColorStop(0,'rgba(0,0,0,0)'); rg.addColorStop(1,'rgba(0,0,0,.55)');
+  cx.fillStyle=rg; cx.fillRect(0,0,F.w,F.h);
+
+  await document.fonts.ready;                      // canvas won't use a font that isn't loaded
+
+  // --- the mark ---
+  const markSize=Math.round(F.w*0.030);
+  cx.textAlign='left'; cx.textBaseline='alphabetic';
+  cx.font=`300 ${markSize}px "JetBrains Mono", monospace`;
+  cx.fillStyle='rgba(232,230,223,.55)';
+  cx.letterSpacing=`${markSize*0.34}px`;
+  cx.fillText('ANKIT',pad,pad+markSize);
+  cx.letterSpacing='0px';
+
+  // --- the words, anchored to the floor ---
+  const body=voiceText(cardVoice).trim();
+  const maxW=F.w-pad*2;
+  const bodySize=Math.round(F.w*(cardFmt==='wide'?0.048:0.056));
+  const lineH=bodySize*1.42;
+
+  cx.font=`300 italic ${bodySize}px "Fraunces", Georgia, serif`;
+  let lines=wrapText(cx,body,maxW);
+  const maxLines=cardFmt==='story'?11:(cardFmt==='wide'?6:8);
+  if(lines.length>maxLines){ lines=lines.slice(0,maxLines); lines[maxLines-1]=lines[maxLines-1].replace(/[.,;:—]?$/,'…'); }
+
+  const seedSize=Math.round(F.w*0.026);
+  const footSize=Math.round(F.w*0.024);
+  const blockH=lines.length*lineH;
+  let y=F.h-pad-footSize-Math.round(F.h*0.045)-blockH+bodySize;
+
+  // seed label above the text
+  cx.font=`300 ${seedSize}px "JetBrains Mono", monospace`;
+  cx.letterSpacing=`${seedSize*0.3}px`;
+  cx.fillStyle='rgba(216,196,138,.92)';
+  cx.fillText(String(captured.seed||'').toLowerCase(),pad,y-bodySize-Math.round(F.h*0.032));
+  cx.letterSpacing='0px';
+
+  // the text itself
+  cx.font=`300 italic ${bodySize}px "Fraunces", Georgia, serif`;
+  cx.fillStyle='#e8e6df';
+  for(const ln of lines){ cx.fillText(ln,pad,y); y+=lineH; }
+
+  // --- footer: which voice, and the work ---
+  const fy=F.h-pad;
+  cx.font=`300 ${footSize}px "JetBrains Mono", monospace`;
+  cx.letterSpacing=`${footSize*0.24}px`;
+  cx.fillStyle='rgba(143,144,164,.9)';
+  cx.fillText((VOICE_LABEL[cardVoice]||'').toLowerCase(),pad,fy);
+  cx.textAlign='right';
+  cx.fillStyle='rgba(143,144,164,.55)';
+  cx.fillText('the symphony of shadows',F.w-pad,fy);
+  cx.letterSpacing='0px'; cx.textAlign='left';
+}
+
+/* ---- the sheet ---- */
+function buildPickers(){
+  const fr=$('fmtRow'); fr.innerHTML='';
+  for(const k in FORMATS){
+    const b=document.createElement('button');
+    b.className='pick'+(k===cardFmt?' on':''); b.textContent=FORMATS[k].label;
+    b.onclick=()=>{ cardFmt=k; buildPickers(); composeCard(); };
+    fr.appendChild(b);
+  }
+  const vr=$('voiceRow'); vr.innerHTML='';
+  const spoken=Object.keys(captured.voices).filter(k=>voiceText(k).trim());
+  if(!spoken.includes(cardVoice)) cardVoice=spoken.includes('observer')?'observer':spoken[0];
+  for(const k of spoken){
+    const b=document.createElement('button');
+    b.className='pick'+(k===cardVoice?' on':''); b.textContent=(VOICE_LABEL[k]||k).toLowerCase();
+    b.onclick=()=>{ cardVoice=k; buildPickers(); composeCard(); };
+    vr.appendChild(b);
+  }
+}
+
+async function openSheet(){
+  if(!Object.keys(captured.voices).length) return;
+  const sh=$('sheet');
+  sh.hidden=false; requestAnimationFrame(()=>sh.classList.add('show'));
+  buildPickers();
+  await composeCard();
+  $('share').hidden = !(navigator.canShare && navigator.share);
+}
+function closeSheet(){
+  const sh=$('sheet');
+  sh.classList.remove('show');
+  setTimeout(()=>{ sh.hidden=true; },350);
+}
+
+function cardBlob(){
+  return new Promise(r=>$('card').toBlob(b=>r(b),'image/png'));
+}
+const cardName=()=>`ankit-${String(captured.seed||'seed').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}-${cardVoice}.png`;
+
+$('keep').onclick=openSheet;
+$('sheetClose').onclick=closeSheet;
+$('sheet').addEventListener('click',e=>{ if(e.target===$('sheet')) closeSheet(); });
+addEventListener('keydown',e=>{ if(e.key==='Escape' && !$('sheet').hidden) closeSheet(); });
+
+$('dl').onclick=async()=>{
+  const b=await cardBlob(); if(!b) return;
+  const u=URL.createObjectURL(b), a=document.createElement('a');
+  a.href=u; a.download=cardName(); a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),4000);
+};
+
+$('share').onclick=async()=>{
+  try{
+    const b=await cardBlob(); if(!b) return;
+    const f=new File([b],cardName(),{type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[f]})){
+      await navigator.share({files:[f],text:`“${captured.seed}” — ANKIT`});
+    }
+  }catch(e){ if(e.name!=='AbortError') console.warn('share:',e); }
+};
 
 /* ---------- boot ---------- */
 initField(); setPhase('ambient'); requestAnimationFrame(frame);
