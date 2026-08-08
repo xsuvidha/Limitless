@@ -1,4 +1,4 @@
-/* Limitless — offline shell.
+/* ANKIT — offline shell.
 
    Strategy matters here:
    • HTML  → NETWORK-FIRST. Always try the network, fall back to cache
@@ -7,7 +7,7 @@
    • Static assets (icon, manifest) → cache-first; they rarely change.
    • /api/ → never touched. Generation is always live.                */
 
-const CACHE = 'limitless-v3';
+const CACHE = 'ankit-v5';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {

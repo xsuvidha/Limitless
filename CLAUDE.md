@@ -7,7 +7,7 @@ Read this before touching anything.
 
 ## What this project is
 
-**The Symphony of Shadows** — a six-voice meditation engine. A person offers one
+**ANKIT — The Symphony of Shadows** — a seven-voice meditation engine. A person offers one
 *seed* (a word, an object, a question). The system returns a layered performance
 that refuses to resolve into a single truth, revealed as timed movements over a
 living generative canvas.
@@ -15,7 +15,8 @@ living generative canvas.
 It is **a work of art about perception**, not a utility. Every design decision
 should be judged by: *does this deepen the vertigo, or just add a feature?*
 
-### The six voices
+### The seven voices
+Harmony conducts (the programme note); the other six speak as movements.
 
 | # | Agent | Does |
 |---|-------|------|
@@ -24,7 +25,8 @@ should be judged by: *does this deepen the vertigo, or just add a feature?*
 | iii | **Echo** | Chains clauses that turn each reading against itself; refuses closure |
 | iv | **Harmony** | The conductor's note — where to begin soft, swell, hold silence |
 | v | **Guardian** | Names an abstract noise-artwork of the seed dissolving |
-| vi | **Observer** | The closing question, grounded in this specific seed |
+| vi | **Heretic** | The accusation — indicts the seed and the other voices for manufactured significance |
+| vii | **Observer** | The closing question, grounded in this specific seed |
 
 ---
 
@@ -77,6 +79,7 @@ Not decoration — the animation **performs the meaning**. Phase per agent:
 - `echo` — trail-fade lowered, ghosts persist and multiply
 - `harmony` — curl down + shared drift → laminar bands
 - `guardian` — turbulence/jitter spike + impulse burst → detonation
+- `heretic` — curl near zero → rigid straight lines, no colour, unforgiving
 - `observer` — heavy damping → near-stillness around one faint point
 
 Params live in `P` and lerp toward `TARGET` each frame, so transitions **dissolve,
@@ -127,9 +130,12 @@ marketing gloss, no "unleash your creativity."
 
 - **v1 (done)** — PWA, six voices, Umbral Drift, failover proxy, offline shell.
 - **v1.1** — deploy (GitHub → Vercel); Supabase gallery with RLS.
-- **v2** — SSE streaming so voices arrive as they're written; WebGL/GLSL field
-  for 10k+ traces; Harmony genuinely *arranges* (reorders/withholds movements);
-  pgvector semantic gallery ("seeds that rhyme with yours").
+- **v2 (done)** — SSE streaming (NDJSON per voice).
+- **v3 (done)** — WebGL2 GPU field, 24k traces, transform feedback.
+- **v4 (done)** — Harmony conducts: score, withholding, rests, programme note.
+- **v5 (done)** — The Heretic (7th voice); rebranded to ANKIT.
+- **next** — see ADR-002: identity (Supabase auth) → the shareable artifact
+  (capture the field + text as a postable asset) → scheduling → publishing last.
 
 ---
 

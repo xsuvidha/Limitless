@@ -7,8 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Limitless" />
-<title>Limitless — The Symphony of Shadows</title>
+<meta name="apple-mobile-web-app-title" content="ANKIT" />
+<title>ANKIT — The Symphony of Shadows</title>
 
 <!-- Installable PWA manifest -->
 <link rel="manifest" href="./manifest.webmanifest" />
@@ -48,12 +48,17 @@
   .overture{max-width:560px;width:100%;text-align:center;transition:opacity 1.1s ease,transform 1.1s ease}
   .overture.gone{opacity:0;transform:translateY(-14px) scale(.99);pointer-events:none;position:absolute}
   .kicker{font-family:"JetBrains Mono",monospace;font-weight:300;font-size:11px;letter-spacing:.42em;
-    text-transform:uppercase;color:var(--dim);margin-bottom:26px}
+    text-transform:uppercase;color:var(--dim);margin-bottom:30px;display:flex;
+    align-items:center;justify-content:center;gap:2px}
   .kicker span{color:var(--intel)}
-  h1{font-family:"Fraunces",serif;font-weight:300;font-optical-sizing:auto;line-height:.98;
-    font-size:clamp(38px,12vw,74px);letter-spacing:-.01em;margin-bottom:6px}
-  h1 em{font-style:italic;color:var(--illusion)}
+  h1{font-family:"Fraunces",serif;font-weight:300;font-optical-sizing:auto;line-height:.94;
+    font-size:clamp(52px,17vw,104px);letter-spacing:.06em;margin-bottom:14px}
+  .work{font-family:"Fraunces",serif;font-weight:300;font-style:normal;line-height:1.08;
+    font-size:clamp(20px,6vw,30px);color:var(--bone);opacity:.82;margin-bottom:18px;letter-spacing:.005em}
+  .work em{font-style:italic;color:var(--illusion);opacity:.95}
   .sub{font-style:italic;color:var(--mist);font-size:clamp(14px,4vw,17px);margin-bottom:40px;letter-spacing:.01em}
+  .kicker .seven{font-family:"Fraunces",serif;font-size:1.9em;line-height:0;color:var(--intel);
+    letter-spacing:0;vertical-align:-.12em;margin-right:.18em}
   .seedwrap{position:relative;display:flex;align-items:center;gap:12px;
     border-bottom:1px solid var(--edge);padding:10px 4px;transition:border-color .5s}
   .seedwrap:focus-within{border-color:var(--intel)}
@@ -109,6 +114,8 @@
   .mv-guardian{--acc:var(--guardian)}
   .mv-guardian .cap{font-family:"Fraunces",serif;font-style:italic;font-size:22px;color:var(--guardian);margin-bottom:8px}
   .mv-guardian .body{font-size:16px;line-height:1.7;color:#e2c6bf}
+  .mv-heretic{--acc:var(--heretic)}
+  .mv-heretic .body{font-size:16.5px;line-height:1.62;color:#b9bec3;letter-spacing:.004em}
   .mv-observer{--acc:var(--observer)}
   .mv-observer{margin-top:6px;padding-top:26px;border-top:1px solid var(--line)}
   .mv-observer .q{font-family:"Fraunces",serif;font-weight:300;font-size:clamp(21px,6.2vw,30px);
@@ -160,8 +167,9 @@
 <div class="stage">
   <!-- OVERTURE -->
   <div class="overture" id="overture">
-    <div class="kicker">A multi&#8209;agent meditation · <span>six voices, one seed</span></div>
-    <h1>The Symphony<br>of <em>Shadows</em></h1>
+    <div class="kicker"><span class="seven">7</span> voices, one seed</div>
+    <h1>ANKIT</h1>
+    <p class="work">The Symphony<br>of <em>Shadows</em></p>
     <p class="sub">Offer a single seed. Watch its truth refuse to settle.</p>
     <div class="seedwrap">
       <input id="seed" autocomplete="off" spellcheck="false" placeholder="a locked door · the number 4 · honey badger…" />
@@ -206,6 +214,7 @@ const AGENTS = [
   {key:'illusionist',label:'Illusionist · the framings',  css:'var(--illusion)'},
   {key:'echo',       label:'Echo · the refusal to close', css:'var(--echo)'},
   {key:'guardian',   label:'Guardian · the scattering',   css:'var(--guardian)'},
+  {key:'heretic',    label:'Heretic · the accusation',    css:'var(--heretic)'},
   {key:'observer',   label:'Observer · the question',     css:'var(--observer)'},
 ];
 const AGENT=Object.fromEntries(AGENTS.map(a=>[a.key,a]));
@@ -243,6 +252,7 @@ function setPhase(name){
     echo:     {...base, ghost:.014, glow:.75, curl:1.6, speed:1.05, hue:'#6fb7c9'},      // ghosts multiply (low fade)
     harmony:  {...base, curl:.35, drift:.5, damp:.965, glow:.6, ghost:.045, hue:'#a8c3b0'}, // laminar bands
     guardian: {...base, turb:1, jitter:1, spread:1.4, speed:1.5, glow:.9, ghost:.08, hue:'#c97a6d'}, // detonate
+    heretic:  {...base, curl:.04, drift:.15, speed:1.25, damp:.955, glow:.42, ghost:.07, hue:'#8b9096'}, // straight, unforgiving lines
     observer: {...base, speed:.28, damp:.985, curl:.5, glow:.45, ghost:.05, hue:'#c9ccdc'},// stillness
     rest:     {...base, speed:.4, glow:.38, hue:'#5a5f78'},
   };
@@ -604,9 +614,9 @@ buildTicks(AGENTS.map(a=>a.key));
 
 const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ENTRANCE={ intel:'materialize', illusionist:'stagger', echo:'type',
-                 guardian:'materialize', observer:'type' };
+                 guardian:'materialize', heretic:'materialize', observer:'type' };
 const TYPE_MS={ echo:16, observer:34 };          // observer is slower — it's the last breath
-const ROMAN=['i.','ii.','iii.','iv.','v.'];
+const ROMAN=['i.','ii.','iii.','iv.','v.','vi.'];
 
 let queue=[], playing=false, aborter=null, lastProvider=null, finished=false;
 
@@ -630,7 +640,7 @@ function shell(agent,i){
   const el=document.createElement('div');
   el.className='mv show mv-'+(agent==='illusionist'?'illusion':agent);
   const labels={intel:'Intel',illusionist:'Illusionist · five framings',echo:'Echo',
-                guardian:'Guardian · the scattering',observer:''};
+                guardian:'Guardian · the scattering',heretic:'Heretic · the accusation',observer:''};
   if(agent!=='observer') el.innerHTML=`<div class="tag"><span class="n">${ROMAN[i]||''}</span> ${labels[agent]}</div>`;
   stagewrap.appendChild(el);
   return el;
@@ -650,7 +660,7 @@ function showProgramme(note){
 function showSilences(withheld){
   if(!withheld||!withheld.length) return;
   const names={intel:'Intel',illusionist:'The Illusionist',echo:'Echo',
-               guardian:'The Guardian',observer:'The Observer'};
+               guardian:'The Guardian',heretic:'The Heretic',observer:'The Observer'};
   const list=withheld.map(k=>names[k]||k);
   const txt=list.length===1?`${list[0]} did not speak.`:`${list.slice(0,-1).join(', ')} and ${list.at(-1)} did not speak.`;
   const el=document.createElement('div');

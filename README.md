@@ -1,4 +1,5 @@
-# The Symphony of Shadows
+# ANKIT
+### The Symphony of Shadows
 
 > Offer a single seed. Watch its truth refuse to settle.
 
@@ -6,7 +7,7 @@ A six-voice meditation engine on perception, complexity, and truth — delivered
 an installable PWA with a generative field that *performs* the philosophy instead
 of decorating it.
 
-Give it one word. Six agents answer: **Intel** finds buried adjacencies,
+Give it one word. Seven voices answer: **Intel** finds buried adjacencies,
 **Illusionist** splits it into five framings that can't all be true, **Echo**
 refuses to let any close, **Harmony** arranges the vertigo, **Guardian** names its
 dissolution, and **Observer** asks what's left of truth when it's over.

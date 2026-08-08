@@ -38,4 +38,4 @@ app.post('/api/stream', async (req, res) => {
 app.use(express.static('public'));
 
 const port = process.env.PORT || 8787;
-app.listen(port, () => console.log(`◈ Limitless on http://localhost:${port}`));
+app.listen(port, () => console.log(`◈ ANKIT on http://localhost:${port}`));
