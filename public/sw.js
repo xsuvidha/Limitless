@@ -7,7 +7,7 @@
    • Static assets (icon, manifest) → cache-first; they rarely change.
    • /api/ → never touched. Generation is always live.                */
 
-const CACHE = 'ankit-v6-3';
+const CACHE = 'ankit-v7';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', e => {

@@ -166,9 +166,23 @@
   .pick:hover{color:var(--bone);border-color:var(--edge)}
   .pick.on{color:var(--void);background:var(--bone);border-color:var(--bone)}
 
-  .preview{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  .preview{flex:0 0 auto;max-height:38vh;display:flex;align-items:center;justify-content:center;
     border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#050508}
   .preview canvas{max-width:100%;max-height:100%;display:block;object-fit:contain}
+
+  .sheetScroll{overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:6px;
+    padding-right:4px;scrollbar-width:thin}
+  .sheetScroll::-webkit-scrollbar{width:3px}
+  .sheetScroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+  .rowLabel{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--dim);margin:8px 0 2px;display:flex;justify-content:space-between}
+  .rowLabel span{opacity:.7;letter-spacing:.1em}
+  #cardText,#sig{width:100%;background:rgba(255,255,255,.03);border:1px solid var(--line);
+    border-radius:8px;padding:11px 12px;color:var(--bone);font-family:"Spectral",Georgia,serif;
+    font-size:14.5px;line-height:1.5;outline:none;resize:vertical;transition:border-color .3s}
+  #cardText:focus,#sig:focus{border-color:var(--edge)}
+  #sig{font-family:"Fraunces",serif;font-style:italic;resize:none}
+  #cardText::placeholder,#sig::placeholder{color:var(--dim);font-style:italic}
 
   .sheetFoot{display:flex;gap:9px}
   .sheetFoot button{flex:1;font-family:"JetBrains Mono",monospace;font-size:11px;
@@ -245,10 +259,24 @@
       <button id="sheetClose" aria-label="close">&times;</button>
     </div>
 
-    <div class="pickRow" id="fmtRow"></div>
-    <div class="pickRow" id="voiceRow"></div>
-
     <div class="preview"><canvas id="card"></canvas></div>
+
+    <div class="sheetScroll">
+      <div class="rowLabel">format</div>
+      <div class="pickRow" id="fmtRow"></div>
+
+      <div class="rowLabel">ground</div>
+      <div class="pickRow" id="bgRow"></div>
+
+      <div class="rowLabel">voice</div>
+      <div class="pickRow" id="voiceRow"></div>
+
+      <div class="rowLabel">words <span id="charCount"></span></div>
+      <textarea id="cardText" rows="4" spellcheck="false"></textarea>
+
+      <div class="rowLabel">signature</div>
+      <input id="sig" placeholder="your name — remembered on this device" maxlength="32" autocomplete="off" />
+    </div>
 
     <div class="sheetFoot">
       <button id="dl" class="primary">Download</button>
@@ -815,7 +843,7 @@ async function perform(seedText){
   AGENTS.forEach((_,i)=>$('tick'+i)?.classList.remove('on'));
   queue=[]; playing=false; finished=false; lastProvider=null;
   score=null; played=0; buildTicks(AGENTS.map(a=>a.key));
-  captured={seed:seedText,note:'',voices:{}}; $('keep').hidden=true;
+  captured={seed:seedText,note:'',voices:{}}; cardText=''; $('keep').hidden=true;
   now.innerHTML='&nbsp;'; setPhase('ambient');
 
   aborter=new AbortController();
@@ -900,7 +928,83 @@ const VOICE_LABEL={intel:'Intel',illusionist:'Illusionist',echo:'Echo',
   guardian:'Guardian',heretic:'Heretic',observer:'Observer'};
 
 let captured={seed:'',note:'',voices:{}};
-let cardFmt='square', cardVoice='observer';
+let cardFmt='square', cardVoice='observer', cardBg='field';
+let cardText='', cardSig='';
+try{ cardSig=localStorage.getItem('ankit.sig')||''; }catch(e){}
+
+/* ---- procedural grounds ----
+   Seeded by the seed itself, so one word always makes the same art.
+   No image API: instant, free, and actually about THIS performance. */
+const BACKGROUNDS={
+  field:  {label:'field · live'},
+  drift:  {label:'drift'},
+  strata: {label:'strata'},
+  eclipse:{label:'eclipse'},
+  void:   {label:'void'},
+};
+
+function tintOf(){
+  const map={intel:[216,196,138],illusionist:[185,140,214],echo:[111,183,201],
+             guardian:[201,122,109],heretic:[139,144,150],observer:[201,204,220]};
+  return map[cardVoice]||[201,204,220];
+}
+
+function drawGround(cx,W,H){
+  const R=mulberry32(hashStr(String(captured.seed||'seed')+cardBg)());
+  const [tr,tg,tb]=tintOf();
+  cx.fillStyle='#07070b'; cx.fillRect(0,0,W,H);
+
+  if(cardBg==='drift'){
+    // flow-field ribbons — the field's logic, rendered flat
+    cx.lineCap='round';
+    for(let i=0;i<620;i++){
+      let x=R()*W, y=R()*H;
+      const len=18+R()*46, sw=.5+R()*1.7, a=.05+R()*.16;
+      cx.strokeStyle=`rgba(${tr},${tg},${tb},${a})`;
+      cx.lineWidth=sw; cx.beginPath(); cx.moveTo(x,y);
+      for(let k=0;k<len;k++){
+        const ang=Math.sin(x*0.0022+R()*0.02)*1.7+Math.cos(y*0.0026)*1.4;
+        x+=Math.cos(ang)*3.4; y+=Math.sin(ang)*3.4; cx.lineTo(x,y);
+      }
+      cx.stroke();
+    }
+  }
+  else if(cardBg==='strata'){
+    // geological bands — sediment, time, layers
+    let y=0;
+    while(y<H){
+      const h=H*(0.012+R()*0.075);
+      const l=0.03+R()*0.17;
+      cx.fillStyle=`rgba(${tr},${tg},${tb},${l})`;
+      cx.fillRect(0,y,W,h);
+      if(R()>0.72){                            // a fault line
+        cx.fillStyle=`rgba(232,230,223,${0.05+R()*0.1})`;
+        cx.fillRect(0,y+h*0.5,W,Math.max(1,H*0.0012));
+      }
+      y+=h;
+    }
+  }
+  else if(cardBg==='eclipse'){
+    // a dark disc with a burning rim
+    const cxp=W*(0.32+R()*0.36), cyp=H*(0.3+R()*0.3), rad=Math.min(W,H)*(0.26+R()*0.16);
+    const g=cx.createRadialGradient(cxp,cyp,rad*0.86,cxp,cyp,rad*2.1);
+    g.addColorStop(0,`rgba(${tr},${tg},${tb},.55)`);
+    g.addColorStop(.16,`rgba(${tr},${tg},${tb},.14)`);
+    g.addColorStop(1,'rgba(7,7,11,0)');
+    cx.fillStyle=g; cx.fillRect(0,0,W,H);
+    cx.beginPath(); cx.arc(cxp,cyp,rad,0,Math.PI*2);
+    cx.fillStyle='#07070b'; cx.fill();
+    cx.strokeStyle=`rgba(${tr},${tg},${tb},.4)`; cx.lineWidth=Math.max(1,W*0.0016); cx.stroke();
+  }
+  // 'void' draws nothing further — the dark is the point
+
+  // shared grain, so nothing looks like flat vector art
+  const n=Math.round(W*H/900);
+  for(let i=0;i<n;i++){
+    cx.fillStyle=`rgba(232,230,223,${R()*0.045})`;
+    cx.fillRect(R()*W,R()*H,1,1);
+  }
+}
 
 /* ---- pull the field off the GPU ----
    readPixels from the accumulation FBO rather than the visible canvas:
@@ -960,12 +1064,16 @@ async function composeCard(){
   const cx=card.getContext('2d');
   const pad=Math.round(F.w*0.085);
 
-  // --- field as ground, scaled to cover ---
-  const field=captureField();
-  const sc=Math.max(F.w/field.width, F.h/field.height);
-  const dw=field.width*sc, dh=field.height*sc;
-  cx.fillStyle='#07070b'; cx.fillRect(0,0,F.w,F.h);
-  cx.drawImage(field,(F.w-dw)/2,(F.h-dh)/2,dw,dh);
+  // --- the ground ---
+  if(cardBg==='field'){
+    const field=captureField();
+    const sc=Math.max(F.w/field.width, F.h/field.height);
+    const dw=field.width*sc, dh=field.height*sc;
+    cx.fillStyle='#07070b'; cx.fillRect(0,0,F.w,F.h);
+    cx.drawImage(field,(F.w-dw)/2,(F.h-dh)/2,dw,dh);
+  } else {
+    drawGround(cx,F.w,F.h);
+  }
 
   // --- darken so type can breathe ---
   const g=cx.createLinearGradient(0,0,0,F.h);
@@ -990,7 +1098,7 @@ async function composeCard(){
   cx.letterSpacing='0px';
 
   // --- the words, anchored to the floor ---
-  const body=voiceText(cardVoice).trim();
+  const body=(cardText||voiceText(cardVoice)).trim();
   const maxW=F.w-pad*2;
   const bodySize=Math.round(F.w*(cardFmt==='wide'?0.048:0.056));
   const lineH=bodySize*1.42;
@@ -1002,8 +1110,10 @@ async function composeCard(){
 
   const seedSize=Math.round(F.w*0.026);
   const footSize=Math.round(F.w*0.024);
+  const sigSize=Math.round(F.w*0.030);
+  const sigGap=cardSig.trim()?sigSize*2.1:0;
   const blockH=lines.length*lineH;
-  let y=F.h-pad-footSize-Math.round(F.h*0.045)-blockH+bodySize;
+  let y=F.h-pad-footSize-Math.round(F.h*0.045)-sigGap-blockH+bodySize;
 
   // seed label above the text
   cx.font=`300 ${seedSize}px "JetBrains Mono", monospace`;
@@ -1016,6 +1126,15 @@ async function composeCard(){
   cx.font=`300 italic ${bodySize}px "Fraunces", Georgia, serif`;
   cx.fillStyle='#e8e6df';
   for(const ln of lines){ cx.fillText(ln,pad,y); y+=lineH; }
+
+  // --- the signature, set like a hand under a poem ---
+  if(cardSig.trim()){
+    cx.textAlign='right';
+    cx.font=`300 italic ${sigSize}px "Fraunces", Georgia, serif`;
+    cx.fillStyle='rgba(232,230,223,.72)';
+    cx.fillText('— '+cardSig.trim(), F.w-pad, y-lineH+sigSize*1.5);
+    cx.textAlign='left';
+  }
 
   // --- footer: which voice, and the work ---
   const fy=F.h-pad;
@@ -1030,23 +1149,37 @@ async function composeCard(){
 }
 
 /* ---- the sheet ---- */
-function buildPickers(){
-  const fr=$('fmtRow'); fr.innerHTML='';
-  for(const k in FORMATS){
+let recomposeTimer=null;
+function recompose(){ clearTimeout(recomposeTimer); recomposeTimer=setTimeout(composeCard,90); }
+
+function row(el,map,current,pick){
+  el.innerHTML='';
+  for(const k in map){
     const b=document.createElement('button');
-    b.className='pick'+(k===cardFmt?' on':''); b.textContent=FORMATS[k].label;
-    b.onclick=()=>{ cardFmt=k; buildPickers(); composeCard(); };
-    fr.appendChild(b);
+    b.className='pick'+(k===current?' on':''); b.textContent=map[k].label;
+    b.onclick=()=>pick(k);
+    el.appendChild(b);
   }
-  const vr=$('voiceRow'); vr.innerHTML='';
+}
+
+function buildPickers(){
+  row($('fmtRow'),FORMATS,cardFmt,k=>{ cardFmt=k; buildPickers(); recompose(); });
+  row($('bgRow'),BACKGROUNDS,cardBg,k=>{ cardBg=k; buildPickers(); recompose(); });
+
   const spoken=Object.keys(captured.voices).filter(k=>voiceText(k).trim());
   if(!spoken.includes(cardVoice)) cardVoice=spoken.includes('observer')?'observer':spoken[0];
-  for(const k of spoken){
-    const b=document.createElement('button');
-    b.className='pick'+(k===cardVoice?' on':''); b.textContent=(VOICE_LABEL[k]||k).toLowerCase();
-    b.onclick=()=>{ cardVoice=k; buildPickers(); composeCard(); };
-    vr.appendChild(b);
-  }
+  const vmap={}; for(const k of spoken) vmap[k]={label:(VOICE_LABEL[k]||k).toLowerCase()};
+  row($('voiceRow'),vmap,cardVoice,k=>{
+    cardVoice=k;
+    cardText=voiceText(k);          // switching voice replaces the words
+    $('cardText').value=cardText;
+    updateCount(); buildPickers(); recompose();
+  });
+}
+
+function updateCount(){
+  const n=($('cardText').value||'').length;
+  $('charCount').textContent=n?`${n} chars`:'';
 }
 
 async function openSheet(){
@@ -1054,6 +1187,10 @@ async function openSheet(){
   const sh=$('sheet');
   sh.hidden=false; requestAnimationFrame(()=>sh.classList.add('show'));
   buildPickers();
+  cardText=cardText||voiceText(cardVoice);
+  $('cardText').value=cardText;
+  $('sig').value=cardSig;
+  updateCount();
   await composeCard();
   $('share').hidden = !(navigator.canShare && navigator.share);
 }
@@ -1067,6 +1204,13 @@ function cardBlob(){
   return new Promise(r=>$('card').toBlob(b=>r(b),'image/png'));
 }
 const cardName=()=>`ankit-${String(captured.seed||'seed').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}-${cardVoice}.png`;
+
+$('cardText').addEventListener('input',e=>{ cardText=e.target.value; updateCount(); recompose(); });
+$('sig').addEventListener('input',e=>{
+  cardSig=e.target.value;
+  try{ localStorage.setItem('ankit.sig',cardSig); }catch(err){}   // remembered on this device
+  recompose();
+});
 
 $('keep').onclick=openSheet;
 $('sheetClose').onclick=closeSheet;
